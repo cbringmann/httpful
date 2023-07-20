@@ -1,31 +1,35 @@
 <?php
 
+declare(strict_types = 1);
+
 namespace Httpful\Response;
 
-final class Headers implements \ArrayAccess, \Countable {
+use ArrayAccess;
+use Countable;
+use Exception;
 
+use const PREG_SPLIT_NO_EMPTY;
+
+final class Headers implements ArrayAccess, Countable
+{
     private $headers;
 
-    /**
-     * @param array $headers
-     */
-    private function __construct($headers)
+    /** @param array $headers */
+    private function __construct(array $headers)
     {
         $this->headers = $headers;
     }
 
-    /**
-     * @param string $string
-     * @return Headers
-     */
-    public static function fromString($string)
+    public static function fromString(string $string): self
     {
-        $headers = preg_split("/(\r|\n)+/", $string, -1, \PREG_SPLIT_NO_EMPTY);
+        $headers = preg_split("/(\r|\n)+/", $string, -1, PREG_SPLIT_NO_EMPTY);
         $parse_headers = array();
+
         for ($i = 1; $i < count($headers); $i++) {
-            list($key, $raw_value) = explode(':', $headers[$i], 2);
+            [$key, $raw_value] = explode(':', $headers[$i], 2);
             $key = trim($key);
             $value = trim($raw_value);
+
             if (array_key_exists($key, $parse_headers)) {
                 // See HTTP RFC Sec 4.2 Paragraph 5
                 // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
@@ -37,58 +41,39 @@ final class Headers implements \ArrayAccess, \Countable {
                 $parse_headers[$key] = $value;
             }
         }
+
         return new self($parse_headers);
     }
 
-    /**
-     * @param string $offset
-     * @return bool
-     */
-    public function offsetExists($offset)
+    public function offsetExists(string $offset): bool
     {
         return $this->getCaseInsensitive($offset) !== null;
     }
 
-    /**
-     * @param string $offset
-     * @return mixed
-     */
-    public function offsetGet($offset)
+    public function offsetGet(string $offset): mixed
     {
         return $this->getCaseInsensitive($offset);
     }
 
-    /**
-     * @param string $offset
-     * @param string $value
-     * @throws \Exception
-     */
-    public function offsetSet($offset, $value)
+    /** @throws \Exception */
+    public function offsetSet(string $offset, string $value): void
     {
-        throw new \Exception("Headers are read-only.");
+        throw new Exception("Headers are read-only.");
     }
 
-    /**
-     * @param string $offset
-     * @throws \Exception
-     */
-    public function offsetUnset($offset)
+    /** @throws \Exception */
+    public function offsetUnset(string $offset): void
     {
-        throw new \Exception("Headers are read-only.");
+        throw new Exception("Headers are read-only.");
     }
 
-    /**
-     * @return int
-     */
-    public function count()
+    public function count(): int
     {
         return count($this->headers);
     }
 
-    /**
-     * @return array
-     */
-    public function toArray()
+    /** @return array */
+    public function toArray(): array
     {
         return $this->headers;
     }

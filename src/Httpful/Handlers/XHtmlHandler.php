@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types = 1);
+
 /**
  * Mime Type: text/html
  * Mime Type: application/html+xml

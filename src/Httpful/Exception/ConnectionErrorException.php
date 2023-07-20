@@ -1,54 +1,40 @@
 <?php
 
+declare(strict_types = 1);
+
 namespace Httpful\Exception;
 
+use Exception;
 
-class ConnectionErrorException extends \Exception {
+class ConnectionErrorException extends Exception
+{
+    private string $curlErrorNumber;
 
+    private string $curlErrorString;
 
-	/**
-	 * @var string
-	 */
-	private $curlErrorNumber;
+    public function getCurlErrorNumber(): string
+    {
+        return $this->curlErrorNumber;
+    }
 
-	/**
-	 * @var string
-	 */
-	private $curlErrorString;
+    /** @return $this */
+    public function setCurlErrorNumber(string $curlErrorNumber)
+    {
+        $this->curlErrorNumber = $curlErrorNumber;
 
-	/**
-	 * @return string
-	 */
-	public function getCurlErrorNumber() {
-		return $this->curlErrorNumber;
-	}
+        return $this;
+    }
 
-	/**
-	 * @param string $curlErrorNumber
-	 * @return $this
-	 */
-	public function setCurlErrorNumber($curlErrorNumber) {
-		$this->curlErrorNumber = $curlErrorNumber;
+    public function getCurlErrorString(): string
+    {
+        return $this->curlErrorString;
+    }
 
-		return $this;
-	}
+    /** @return $this */
+    public function setCurlErrorString(string $curlErrorString)
+    {
+        $this->curlErrorString = $curlErrorString;
 
-	/**
-	 * @return string
-	 */
-	public function getCurlErrorString() {
-		return $this->curlErrorString;
-	}
-
-	/**
-	 * @param string $curlErrorString
-	 * @return $this
-	 */
-	public function setCurlErrorString($curlErrorString) {
-		$this->curlErrorString = $curlErrorString;
-
-		return $this;
-	}
-
-
+        return $this;
+    }
 }

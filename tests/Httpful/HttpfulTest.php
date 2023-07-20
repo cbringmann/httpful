@@ -1,34 +1,44 @@
 <?php
+
+declare(strict_types = 1);
+
 /**
  * Port over the original tests into a more traditional PHPUnit
- * format.  Still need to hook into a lightweight HTTP server to
- * better test some things (e.g. obscure cURL settings).  I've moved
+ * format. Still need to hook into a lightweight HTTP server to
+ * better test some things (e.g. obscure cURL settings). I've moved
  * the old tests and node.js server to the tests/.legacy directory.
  *
  * @author Nate Good <me@nategood.com>
  */
+
 namespace Httpful\Test;
 
-require(dirname(dirname(dirname(__FILE__))) . '/bootstrap.php');
-\Httpful\Bootstrap::init();
+require dirname(dirname(dirname(__FILE__))) . '/bootstrap.php';
+Bootstrap::init();
 
-use Httpful\Httpful;
-use Httpful\Request;
-use Httpful\Mime;
-use Httpful\Http;
-use Httpful\Response;
+use Httpful\Bootstrap;
+use Httpful\Exception\ConnectionErrorException;
+use Httpful\Exception\JsonParseException;
 use Httpful\Handlers\JsonHandler;
+use Httpful\Handlers\MimeHandlerAdapter;
+use Httpful\Handlers\XmlHandler;
+use Httpful\Http;
+use Httpful\Httpful;
+use Httpful\Mime;
+use Httpful\Request;
+use Httpful\Response;
+use PHPUnit\Framework\TestCase;
 
 define('TEST_SERVER', WEB_SERVER_HOST . ':' . WEB_SERVER_PORT);
 
-class HttpfulTest extends \PHPUnit\Framework\TestCase
+class HttpfulTest extends TestCase
 {
     const TEST_SERVER = TEST_SERVER;
     const TEST_URL = 'http://127.0.0.1:8008';
     const TEST_URL_400 = 'http://127.0.0.1:8008/400';
 
     const SAMPLE_JSON_HEADER =
-"HTTP/1.1 200 OK
+    "HTTP/1.1 200 OK
 Content-Type: application/json
 Connection: keep-alive
 Transfer-Encoding: chunked\r\n";
@@ -43,63 +53,64 @@ access-control-allow-headers: Authorization, Content-Type, Accept-Encoding, Cach
 cache-control: private, must-revalidate\r\n";
     const SAMPLE_JSON_RESPONSE = '{"key":"value","object":{"key":"value"},"array":[1,2,3,4]}';
     const SAMPLE_CSV_HEADER =
-"HTTP/1.1 200 OK
+    "HTTP/1.1 200 OK
 Content-Type: text/csv
 Connection: keep-alive
 Transfer-Encoding: chunked\r\n";
     const SAMPLE_CSV_RESPONSE =
-"Key1,Key2
+    "Key1,Key2
 Value1,Value2
 \"40.0\",\"Forty\"";
     const SAMPLE_XML_RESPONSE = '<stdClass><arrayProp><array><k1><myClass><intProp>2</intProp></myClass></k1></array></arrayProp><stringProp>a string</stringProp><boolProp>TRUE</boolProp></stdClass>';
     const SAMPLE_XML_HEADER =
-"HTTP/1.1 200 OK
+    "HTTP/1.1 200 OK
 Content-Type: application/xml
 Connection: keep-alive
 Transfer-Encoding: chunked\r\n";
     const SAMPLE_VENDOR_HEADER =
-"HTTP/1.1 200 OK
+    "HTTP/1.1 200 OK
 Content-Type: application/vnd.nategood.message+xml
 Connection: keep-alive
 Transfer-Encoding: chunked\r\n";
     const SAMPLE_VENDOR_TYPE = "application/vnd.nategood.message+xml";
     const SAMPLE_MULTI_HEADER =
-"HTTP/1.1 200 OK
+    "HTTP/1.1 200 OK
 Content-Type: application/json
 Connection: keep-alive
 Transfer-Encoding: chunked
 X-My-Header:Value1
 X-My-Header:Value2\r\n";
 
-    function testInit()
+    function testInit(): void
     {
-      $r = Request::init();
+        $r = Request::init();
       // Did we get a 'Request' object?
-      $this->assertEquals('Httpful\Request', get_class($r));
-    }
-
-    function testDetermineLength()
-    {
-      $r = Request::init();
-      $this->assertEquals(1, $r->_determineLength('A'));
-      $this->assertEquals(2, $r->_determineLength('À'));
-      $this->assertEquals(2, $r->_determineLength('Ab'));
-      $this->assertEquals(3, $r->_determineLength('Àb'));
-      $this->assertEquals(6, $r->_determineLength('世界'));
-    }
-
-    function testMethods()
-    {
-      $valid_methods = array('get', 'post', 'delete', 'put', 'options', 'head');
-      $url = 'http://example.com/';
-      foreach ($valid_methods as $method) {
-        $r = call_user_func(array('Httpful\Request', $method), $url);
         $this->assertEquals('Httpful\Request', get_class($r));
-        $this->assertEquals(strtoupper($method), $r->method);
-      }
     }
 
-    function testDefaults()
+    function testDetermineLength(): void
+    {
+        $r = Request::init();
+        $this->assertEquals(1, $r->_determineLength('A'));
+        $this->assertEquals(2, $r->_determineLength('À'));
+        $this->assertEquals(2, $r->_determineLength('Ab'));
+        $this->assertEquals(3, $r->_determineLength('Àb'));
+        $this->assertEquals(6, $r->_determineLength('世界'));
+    }
+
+    function testMethods(): void
+    {
+        $valid_methods = array('get', 'post', 'delete', 'put', 'options', 'head');
+        $url = 'http://example.com/';
+
+        foreach ($valid_methods as $method) {
+            $r = call_user_func(array('Httpful\Request', $method), $url);
+            $this->assertEquals('Httpful\Request', get_class($r));
+            $this->assertEquals(strtoupper($method), $r->method);
+        }
+    }
+
+    function testDefaults(): void
     {
         // Our current defaults are as follows
         $r = Request::init();
@@ -107,30 +118,30 @@ X-My-Header:Value2\r\n";
         $this->assertFalse($r->strict_ssl);
     }
 
-    function testShortMime()
+    function testShortMime(): void
     {
         // Valid short ones
-        $this->assertEquals(Mime::JSON,  Mime::getFullMime('json'));
-        $this->assertEquals(Mime::XML,   Mime::getFullMime('xml'));
-        $this->assertEquals(Mime::HTML,  Mime::getFullMime('html'));
-        $this->assertEquals(Mime::CSV,  Mime::getFullMime('csv'));
-        $this->assertEquals(Mime::UPLOAD,  Mime::getFullMime('upload'));
+        $this->assertEquals(Mime::JSON, Mime::getFullMime('json'));
+        $this->assertEquals(Mime::XML, Mime::getFullMime('xml'));
+        $this->assertEquals(Mime::HTML, Mime::getFullMime('html'));
+        $this->assertEquals(Mime::CSV, Mime::getFullMime('csv'));
+        $this->assertEquals(Mime::UPLOAD, Mime::getFullMime('upload'));
 
         // Valid long ones
         $this->assertEquals(Mime::JSON, Mime::getFullMime(Mime::JSON));
-        $this->assertEquals(Mime::XML,  Mime::getFullMime(Mime::XML));
+        $this->assertEquals(Mime::XML, Mime::getFullMime(Mime::XML));
         $this->assertEquals(Mime::HTML, Mime::getFullMime(Mime::HTML));
         $this->assertEquals(Mime::CSV, Mime::getFullMime(Mime::CSV));
         $this->assertEquals(Mime::UPLOAD, Mime::getFullMime(Mime::UPLOAD));
 
         // No false positives
-        $this->assertNotEquals(Mime::XML,  Mime::getFullMime(Mime::HTML));
+        $this->assertNotEquals(Mime::XML, Mime::getFullMime(Mime::HTML));
         $this->assertNotEquals(Mime::JSON, Mime::getFullMime(Mime::XML));
         $this->assertNotEquals(Mime::HTML, Mime::getFullMime(Mime::JSON));
         $this->assertNotEquals(Mime::XML, Mime::getFullMime(Mime::CSV));
     }
 
-    function testSettingStrictSsl()
+    function testSettingStrictSsl(): void
     {
         $r = Request::init()
              ->withStrictSsl();
@@ -143,7 +154,7 @@ X-My-Header:Value2\r\n";
         $this->assertFalse($r->strict_ssl);
     }
 
-    function testSendsAndExpectsType()
+    function testSendsAndExpectsType(): void
     {
         $r = Request::init()
             ->sendsAndExpectsType(Mime::JSON);
@@ -171,7 +182,7 @@ X-My-Header:Value2\r\n";
         $this->assertEquals(Mime::CSV, $r->content_type);
     }
 
-    function testIni()
+    function testIni(): void
     {
         // Test setting defaults/templates
 
@@ -200,7 +211,7 @@ X-My-Header:Value2\r\n";
         Request::resetIni();
     }
 
-    function testAccept()
+    function testAccept(): void
     {
         $r = Request::get('http://example.com/')
             ->expectsType(Mime::JSON);
@@ -210,7 +221,7 @@ X-My-Header:Value2\r\n";
         $this->assertStringContainsString('application/json', $r->raw_headers);
     }
 
-    function testCustomAccept()
+    function testCustomAccept(): void
     {
         $accept = 'application/api-1.0+json';
         $r = Request::get('http://example.com/')
@@ -221,7 +232,7 @@ X-My-Header:Value2\r\n";
         $this->assertEquals($accept, $r->headers['Accept']);
     }
 
-    function testUserAgent()
+    function testUserAgent(): void
     {
         $r = Request::get('http://example.com/')
             ->withUserAgent('ACME/1.2.3');
@@ -240,7 +251,7 @@ X-My-Header:Value2\r\n";
         $this->assertStringNotContainsString('User-Agent: HttpFul/1.0', $r->raw_headers);
     }
 
-    function testAuthSetup()
+    function testAuthSetup(): void
     {
         $username = 'nathan';
         $password = 'opensesame';
@@ -253,7 +264,7 @@ X-My-Header:Value2\r\n";
         $this->assertTrue($r->hasBasicAuth());
     }
 
-    function testDigestAuthSetup()
+    function testDigestAuthSetup(): void
     {
         $username = 'nathan';
         $password = 'opensesame';
@@ -266,29 +277,29 @@ X-My-Header:Value2\r\n";
         $this->assertTrue($r->hasDigestAuth());
     }
 
-    function testJsonResponseParse()
+    function testJsonResponseParse(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
 
         $this->assertEquals("value", $response->body->key);
         $this->assertEquals("value", $response->body->object->key);
-        $this->assertIsArray( $response->body->array);
+        $this->assertIsArray($response->body->array);
         $this->assertEquals(1, $response->body->array[0]);
     }
 
-    function testJsonResponseParseLowercaseHeaders()
+    function testJsonResponseParseLowercaseHeaders(): void
     {
         $req = Request::init();
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER_LOWERCASE, $req);
 
         $this->assertEquals("value", $response->body->key);
         $this->assertEquals("value", $response->body->object->key);
-        $this->assertIsArray( $response->body->array);
+        $this->assertIsArray($response->body->array);
         $this->assertEquals(1, $response->body->array[0]);
     }
 
-    function testXMLResponseParse()
+    function testXMLResponseParse(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::XML);
         $response = new Response(self::SAMPLE_XML_RESPONSE, self::SAMPLE_XML_HEADER, $req);
@@ -309,18 +320,18 @@ X-My-Header:Value2\r\n";
         $this->assertEquals("a string", (string) $string);
     }
 
-    function testCsvResponseParse()
+    function testCsvResponseParse(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::CSV);
         $response = new Response(self::SAMPLE_CSV_RESPONSE, self::SAMPLE_CSV_HEADER, $req);
 
         $this->assertEquals("Key1", $response->body[0][0]);
         $this->assertEquals("Value1", $response->body[1][0]);
-        $this->assertIsString( $response->body[2][0]);
+        $this->assertIsString($response->body[2][0]);
         $this->assertEquals("40.0", $response->body[2][0]);
     }
 
-    function testParsingContentTypeCharset()
+    function testParsingContentTypeCharset(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         // $response = new Response(SAMPLE_JSON_RESPONSE, "", $req);
@@ -333,7 +344,7 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertEquals($response->charset, 'utf-8');
     }
 
-    function testParsingContentTypeUpload()
+    function testParsingContentTypeUpload(): void
     {
         $req = Request::init();
 
@@ -343,12 +354,14 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertEquals($req->content_type, 'multipart/form-data');
     }
 
-    function testAttach() {
+    function testAttach(): void
+    {
         $req = Request::init();
         $testsPath = realpath(dirname(__FILE__) . DIRECTORY_SEPARATOR . '..');
         $filename = $testsPath . DIRECTORY_SEPARATOR . 'test_image.jpg';
         $req->attach(array('index' => $filename));
         $payload = $req->payload['index'];
+
         // PHP 5.5  + will take advantage of CURLFile while previous
         // versions just use the string syntax
         if (is_string($payload)) {
@@ -361,7 +374,8 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertEquals($req->serialize_payload_method, Request::SERIALIZE_PAYLOAD_NEVER);
     }
 
-    function testIsUpload() {
+    function testIsUpload(): void
+    {
         $req = Request::init();
 
         $req->sendsType(Mime::UPLOAD);
@@ -369,7 +383,7 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertTrue($req->isUpload());
     }
 
-    function testEmptyResponseParse()
+    function testEmptyResponseParse(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         $response = new Response("", self::SAMPLE_JSON_HEADER, $req);
@@ -380,31 +394,31 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertEquals(null, $responseXml->body);
     }
 
-    function testNoAutoParse()
+    function testNoAutoParse(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON)->withoutAutoParsing();
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
-        $this->assertIsString( $response->body);
+        $this->assertIsString($response->body);
         $req = Request::init()->sendsAndExpects(Mime::JSON)->withAutoParsing();
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
         $this->assertIsObject($response->body);
     }
 
-    function testParseHeaders()
+    function testParseHeaders(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
         $this->assertEquals('application/json', $response->headers['Content-Type']);
     }
 
-    function testRawHeaders()
+    function testRawHeaders(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
         $this->assertStringContainsString('Content-Type: application/json', $response->raw_headers);
     }
 
-    function testHasErrors()
+    function testHasErrors(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         $response = new Response('', "HTTP/1.1 100 Continue\r\n", $req);
@@ -419,38 +433,44 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertTrue($response->hasErrors());
     }
 
-    function testWhenError() {
+    function testWhenError(): void
+    {
         $caught = false;
 
         try {
             Request::get('malformed:url')
-                ->whenError(function($error) use(&$caught) {
+                ->whenError(static function($error) use (&$caught): void {
                     $caught = true;
                 })
                 ->timeoutIn(0.1)
                 ->send();
-        } catch (\Httpful\Exception\ConnectionErrorException $e) {}
+        } catch (ConnectionErrorException) {
+
+        }
 
         $this->assertTrue($caught);
     }
 
-    function testBeforeSend() {
+    function testBeforeSend(): void
+    {
         $invoked = false;
         $changed = false;
         $self = $this;
 
         try {
             Request::get('malformed://url')
-                ->beforeSend(function($request) use(&$invoked,$self) {
+                ->beforeSend(static function($request) use (&$invoked, $self): void {
                     $self->assertEquals('malformed://url', $request->uri);
                     $self->assertEquals('A payload', $request->serialized_payload);
                     $request->uri('malformed2://url');
                     $invoked = true;
                 })
-                ->whenError(function($error) { /* Be silent */ })
+                ->whenError(static function($error): void {
+ /* Be silent */
+                })
                 ->body('A payload')
                 ->send();
-        } catch (\Httpful\Exception\ConnectionErrorException $e) {
+        } catch (ConnectionErrorException $e) {
             $this->assertTrue(strpos($e->getMessage(), 'malformed2') !== false);
             $changed = true;
         }
@@ -459,7 +479,7 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertTrue($changed);
     }
 
-    function test_parseCode()
+    function test_parseCode(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
@@ -467,14 +487,14 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertEquals(406, $code);
     }
 
-    function testToString()
+    function testToString(): void
     {
         $req = Request::init()->sendsAndExpects(Mime::JSON);
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
         $this->assertEquals(self::SAMPLE_JSON_RESPONSE, (string)$response);
     }
 
-    function test_parseHeaders()
+    function test_parseHeaders(): void
     {
         $parse_headers = Response\Headers::fromString(self::SAMPLE_JSON_HEADER);
         $this->assertCount(3, $parse_headers);
@@ -482,7 +502,7 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertTrue(isset($parse_headers['Connection']));
     }
 
-    function testMultiHeaders()
+    function testMultiHeaders(): void
     {
         $req = Request::init();
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_MULTI_HEADER, $req);
@@ -490,21 +510,21 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertEquals('Value1,Value2', $parse_headers['X-My-Header']);
     }
 
-    function testDetectContentType()
+    function testDetectContentType(): void
     {
         $req = Request::init();
         $response = new Response(self::SAMPLE_JSON_RESPONSE, self::SAMPLE_JSON_HEADER, $req);
         $this->assertEquals('application/json', $response->headers['Content-Type']);
     }
 
-    function testMissingBodyContentType()
+    function testMissingBodyContentType(): void
     {
         $body = 'A string';
-        $request = Request::post(HttpfulTest::TEST_URL, $body)->_curlPrep();
+        $request = Request::post(self::TEST_URL, $body)->_curlPrep();
         $this->assertEquals($body, $request->serialized_payload);
     }
 
-    function testParentType()
+    function testParentType(): void
     {
         // Parent type
         $request = Request::init()->sendsAndExpects(Mime::XML);
@@ -518,19 +538,22 @@ Content-Type: text/plain; charset=utf-8\r\n", $req);
         $this->assertEquals("Nathan", $response->body->name->__toString());
     }
 
-    function testMissingContentType()
+    function testMissingContentType(): void
     {
         // Parent type
         $request = Request::init()->sendsAndExpects(Mime::XML);
-        $response = new Response('<xml><name>Nathan</name></xml>',
-"HTTP/1.1 200 OK
+        $response = new Response(
+            '<xml><name>Nathan</name></xml>',
+            "HTTP/1.1 200 OK
 Connection: keep-alive
-Transfer-Encoding: chunked\r\n", $request);
+Transfer-Encoding: chunked\r\n",
+            $request
+        );
 
         $this->assertEquals("", $response->content_type);
     }
 
-    function testCustomMimeRegistering()
+    function testCustomMimeRegistering(): void
     {
         // Register new mime type handler for "application/vnd.nategood.message+xml"
         Httpful::register(self::SAMPLE_VENDOR_TYPE, new DemoMimeHandler());
@@ -544,7 +567,7 @@ Transfer-Encoding: chunked\r\n", $request);
         $this->assertEquals('custom parse', $response->body);
     }
 
-    public function testShorthandMimeDefinition()
+    public function testShorthandMimeDefinition(): void
     {
         $r = Request::init()->expects('json');
         $this->assertEquals(Mime::JSON, $r->expected_type);
@@ -553,39 +576,38 @@ Transfer-Encoding: chunked\r\n", $request);
         $this->assertEquals(Mime::JSON, $r->expected_type);
     }
 
-    public function testOverrideXmlHandler()
+    public function testOverrideXmlHandler(): void
     {
         // Lazy test...
-        $prev = \Httpful\Httpful::get(\Httpful\Mime::XML);
-        $this->assertEquals($prev, new \Httpful\Handlers\XmlHandler());
+        $prev = Httpful::get(Mime::XML);
+        $this->assertEquals($prev, new XmlHandler());
         $conf = array('namespace' => 'http://example.com');
-        \Httpful\Httpful::register(\Httpful\Mime::XML, new \Httpful\Handlers\XmlHandler($conf));
-        $new = \Httpful\Httpful::get(\Httpful\Mime::XML);
+        Httpful::register(Mime::XML, new XmlHandler($conf));
+        $new = Httpful::get(Mime::XML);
         $this->assertNotEquals($prev, $new);
     }
 
-    public function testHasProxyWithoutProxy()
+    public function testHasProxyWithoutProxy(): void
     {
         $r = Request::get('someUrl');
         $this->assertFalse($r->hasProxy());
     }
 
-    public function testHasProxyWithProxy()
+    public function testHasProxyWithProxy(): void
     {
         $r = Request::get('some_other_url');
         $r->useProxy('proxy.com');
         $this->assertTrue($r->hasProxy());
     }
 
-    public function testHasProxyWithEnvironmentProxy()
+    public function testHasProxyWithEnvironmentProxy(): void
     {
         putenv('http_proxy=http://127.0.0.1:300/');
         $r = Request::get('some_other_url');
         $this->assertTrue($r->hasProxy());
     }
 
-
-    public function testParseJSON()
+    public function testParseJSON(): void
     {
         $handler = new JsonHandler();
 
@@ -593,18 +615,21 @@ Transfer-Encoding: chunked\r\n", $request);
             'foo',
             array(),
             array('foo', 'bar'),
-            null
+            null,
         );
+
         foreach ($bodies as $body) {
             $this->assertEquals($body, $handler->parse(json_encode($body)));
         }
 
         try {
             $result = $handler->parse('invalid{json');
-        } catch (\Httpful\Exception\JsonParseException $e) {
+        } catch (JsonParseException $e) {
             $this->assertEquals('Unable to parse response as JSON: ' . json_last_error_msg(), $e->getMessage());
+
             return;
         }
+
         $this->fail('Expected an exception to be thrown due to invalid json');
     }
 
@@ -625,11 +650,10 @@ Transfer-Encoding: chunked\r\n", $request);
     // }
 }
 
-class DemoMimeHandler extends \Httpful\Handlers\MimeHandlerAdapter
+class DemoMimeHandler extends MimeHandlerAdapter
 {
     public function parse($body)
     {
         return 'custom parse';
     }
 }
-

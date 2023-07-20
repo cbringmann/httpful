@@ -1,28 +1,30 @@
 <?php
-/**
- * @author nick fox <quixand gmail com>
- */
+
+declare(strict_types = 1);
+
+/** @author nick fox <quixand gmail com> */
+
 namespace Httpful\Test;
 
-class requestTest extends \PHPUnit\Framework\TestCase
-{
+use Httpful\Exception\ConnectionErrorException;
+use Httpful\Request;
+use PHPUnit\Framework\TestCase;
 
-    /**
-     * @author Nick Fox
-     */
-    public function testGet_InvalidURL()
+class requestTest extends TestCase
+{
+    /** @author Nick Fox */
+    public function testGet_InvalidURL(): void
     {
         // Silence the default logger via whenError override
         $caught = false;
-        try
-        {
-            \Httpful\Request::get('unavailable.url')->whenError(function($error) {})->send();
-        }
-        catch (\Httpful\Exception\ConnectionErrorException $e)
-        {
+
+        try {
+            Request::get('unavailable.url')->whenError(static function($error): void {
+            })->send();
+        } catch (ConnectionErrorException) {
             $caught = true;
         }
+
         $this->assertTrue($caught);
     }
-
 }

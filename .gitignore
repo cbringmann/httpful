@@ -4,3 +4,4 @@ vendor
 downloads
 .idea/*
 tests/.phpunit.result.cache
+phpcs.xml.dist

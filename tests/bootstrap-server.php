@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types = 1);
+
 $php_version = phpversion();
 $php_major = floatval(substr($php_version, 0, 3));
 
@@ -12,7 +14,12 @@ if ($php_major < 5.4) {
     define('WITHOUT_SERVER', true);
 } else {
     // Command that starts the built-in web server
-    $command = sprintf('php -S %s:%d -t %s >./server.log 2>&1 & echo $!', WEB_SERVER_HOST, WEB_SERVER_PORT, WEB_SERVER_DOCROOT);
+    $command = sprintf(
+        'php -S %s:%d -t %s >./server.log 2>&1 & echo $!',
+        WEB_SERVER_HOST,
+        WEB_SERVER_PORT,
+        WEB_SERVER_DOCROOT
+    );
 
     // Execute the command and store the process ID
     $output = array();
@@ -24,6 +31,7 @@ if ($php_major < 5.4) {
 
     // check server.log to see if it failed to start
     $server_logs = file_get_contents("./server.log");
+
     if (strpos($server_logs, "Fail") !== false) {
         // server failed to start for some reason
         print "Failed to start server! Logs:" . PHP_EOL . PHP_EOL;
@@ -31,9 +39,15 @@ if ($php_major < 5.4) {
         exit(1);
     }
 
-    echo sprintf('%s - Web server started on %s:%d with PID %d', date('r'), WEB_SERVER_HOST, WEB_SERVER_PORT, $pid) . PHP_EOL;
+    echo sprintf(
+        '%s - Web server started on %s:%d with PID %d',
+        date('r'),
+        WEB_SERVER_HOST,
+        WEB_SERVER_PORT,
+        $pid
+    ) . PHP_EOL;
 
-    register_shutdown_function(function() {
+    register_shutdown_function(static function(): void {
         // cleanup after ourselves -- remove log file, shut down server
         global $pid;
         unlink("./server.log");
