@@ -1306,7 +1306,7 @@ class Request
         // This method also adds the custom header support as described in the
         // method comments
         if (count($args) === 0) {
-            return;
+            return $this;
         }
 
         // Strip the sugar.  If it leads with "with", strip.

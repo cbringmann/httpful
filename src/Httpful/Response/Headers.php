@@ -45,24 +45,24 @@ final class Headers implements ArrayAccess, Countable
         return new self($parse_headers);
     }
 
-    public function offsetExists(string $offset): bool
+    public function offsetExists($offset): bool // phpcs:ignore
     {
         return $this->getCaseInsensitive($offset) !== null;
     }
 
-    public function offsetGet(string $offset): mixed
+    public function offsetGet($offset): mixed // phpcs:ignore
     {
         return $this->getCaseInsensitive($offset);
     }
 
     /** @throws \Exception */
-    public function offsetSet(string $offset, string $value): void
+    public function offsetSet($offset, $value): void // phpcs:ignore
     {
         throw new Exception("Headers are read-only.");
     }
 
     /** @throws \Exception */
-    public function offsetUnset(string $offset): void
+    public function offsetUnset($offset): void // phpcs:ignore
     {
         throw new Exception("Headers are read-only.");
     }
