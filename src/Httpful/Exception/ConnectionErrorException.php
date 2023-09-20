@@ -8,17 +8,17 @@ use Exception;
 
 class ConnectionErrorException extends Exception
 {
-    private string $curlErrorNumber;
+    private  int|string $curlErrorNumber;
 
     private string $curlErrorString;
 
-    public function getCurlErrorNumber(): string
+    public function getCurlErrorNumber(): int|string
     {
         return $this->curlErrorNumber;
     }
 
     /** @return $this */
-    public function setCurlErrorNumber(string $curlErrorNumber)
+    public function setCurlErrorNumber(int|string $curlErrorNumber)
     {
         $this->curlErrorNumber = $curlErrorNumber;
 

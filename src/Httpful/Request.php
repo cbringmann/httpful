@@ -62,12 +62,12 @@ class Request
 
     public $uri;
     public $method = Http::GET;
-    public $headers = array();
+    public $headers = [];
     public $raw_headers = '';
     public $strict_ssl = false;
     public $content_type;
     public $expected_type;
-    public $additional_curl_opts = array();
+    public $additional_curl_opts = [];
     public $auto_parse = true;
     public $serialize_payload_method = self::SERIALIZE_PAYLOAD_SMART;
     public $username;
@@ -79,7 +79,7 @@ class Request
     public $send_callback;
     public $follow_redirects = false;
     public $max_redirects = self::MAX_REDIRECTS_DEFAULT;
-    public $payload_serializers = array();
+    public $payload_serializers = [];
 
     // Options
     // private $_options = array(
@@ -941,7 +941,7 @@ class Request
             }
         }
 
-        $headers = array();
+        $headers = [];
         // https://github.com/nategood/httpful/issues/37
         // Except header removes any HTTP 1.1 Continue from response headers
         $headers[] = 'Expect:';
@@ -1101,7 +1101,7 @@ class Request
      *
      * @return \Httpful\Request
      */
-    public function addOnCurlOption(string $curlopt, mixed $curloptval): self
+    public function addOnCurlOption(int|string $curlopt, mixed $curloptval): self
     {
         $this->additional_curl_opts[$curlopt] = $curloptval;
 
