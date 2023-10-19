@@ -75,7 +75,7 @@ class Response
      * @param string Http response body
      * @return array|string|object the response parse accordingly
      */
-    public function _parse($body): array|string|object
+    public function _parse($body): mixed
     {
         // If the user decided to forgo the automatic
         // smart parsing, short circuit.
